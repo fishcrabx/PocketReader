@@ -1,7 +1,11 @@
 auto.waitFor();
 
+wakeUpDevice();
+
 let timeNeed = 30 * 60 * 1000; //需要完成的时间，单位是毫秒
 let pagesNeed = 300; //需要完成的翻页次数
+let timeFinished = 0;//已完成的时间
+let pagesFinished = 0;//已完成的页面数
 
 let showToastInterval = 20 * 1000; //显示剩余完成额度的toast间隔时间,这里设置为20s左右显示一次
 let refreshSettingFileInterval = 60 * 1000; //更新setting文件时间间隔，这里设置为1分钟左右更新一次
@@ -24,16 +28,18 @@ toast('打开第一本小说');
 sleep(3000);
 //下面开始刷小说
 let startTime = new Date().getTime();
-let pages = 0;
 let showToastTime = new Date().getTime();
 let refreshSettingFileTime = new Date().getTime();
-showRestWork();
+showRestWork();//显示剩余工作量
 
-shouldEnd(startTime, pages);
+shouldEnd();
 
 toast('目标达成，结束脚本');
 console.log('目标达成，结束脚本');
 
+/**
+ * 读取配置文件，主要记录了哪天看了多长时间，看了多少页
+ */
 function readSetting() {
     let today = new Date();
     let jsonKey = today.getFullYear() + '' + ((today.getMonth() + 1) > 9 ? (today.getMonth() + 1) : ('0' + (today.getMonth() + 1))) + '' + (today.getDate() > 9 ? today.getDate() : '0' + today.getDate())
@@ -44,9 +50,13 @@ function readSetting() {
         //如果存在今天的数据，则直接更新，否则，创建今天的数据
         let json = JSON.parse(fileContent);
         if (json.hasOwnProperty(jsonKey)) {
-            timeNeed = timeNeed - json[jsonKey].finishTime;
-            pagesNeed = pagesNeed - json[jsonKey].finishPages;
-            toast('读取配置文件完毕，剩余时长为:' + (timeNeed / 1000 / 60).toFixed(2) + '分钟，剩余页数为：' + pagesNeed + '页')
+            timeFinished = json[jsonKey].finishTime;
+            pagesFinished = json[jsonKey].finishPages;
+            if (timeFinished > timeNeed && pagesFinished > pagesNeed) {
+                toast('今日任务已完成，去打卡吧');
+                console.log('今日任务已完成，去打卡吧');
+            }
+            toast('读取配置文件完毕，剩余时长为:' + ((timeNeed - timeFinished) / 1000 / 60).toFixed(2) + '分钟，剩余页数为：' + (pagesNeed - pagesFinished) + '页')
         } else {
             json[jsonKey] = {};
             json[jsonKey].finishTime = 0;
@@ -67,6 +77,9 @@ function readSetting() {
     }
 }
 
+/**
+ * 在翻页过程中，达到写入配置文件的时间间隔就更新配置文件
+ */
 function writeSetting() {
     let today = new Date();
     let jsonKey = today.getFullYear() + '' + ((today.getMonth() + 1) > 9 ? (today.getMonth() + 1) : ('0' + (today.getMonth() + 1))) + '' + (today.getDate() > 9 ? today.getDate() : '0' + today.getDate());
@@ -74,8 +87,8 @@ function writeSetting() {
     let fileContent = files.read(settingFiles, encoding = "UTF-8");
     let json = JSON.parse(fileContent);
     if (json.hasOwnProperty(jsonKey)) {
-        json[jsonKey].finishTime = json[jsonKey].finishTime + today.getTime() - startTime;
-        json[jsonKey].finishPages = json[jsonKey].finishPages + pages;
+        json[jsonKey].finishTime = timeFinished;
+        json[jsonKey].finishPages = pagesFinished;
         files.write(settingFiles, JSON.stringify(json), encoding = "utf-8");
         console.log('更新今日配置文件成功')
         toast('更新今日配置文件成功')
@@ -89,11 +102,21 @@ function writeSetting() {
     }
 }
 
+/**
+ * 脚本主要执行函数：
+ * 首先模拟看书等待时间，这里设置为1-6秒
+ * 然后1秒的时间滑动一页
+ * 判断是否达到显示剩余工作量时间间隔，达到的话就显示剩余工作量（剩余多长时间及剩余多少页需要执行）
+ * 判断是否达到写入配置文件的时间间隔，达到就更新配置文件
+ * 判断是否程序达到总体工作量（设置的30分钟阅读300页），达到就更新配置文件，没达到就继续执行
+ */
 function shouldEnd() {
-    sleep((Math.floor(Math.random() * 6) + 1) * 1000); //等待1-6秒
+    let sleepTime = (Math.floor(Math.random() * 6) + 1) * 1000;
+    sleep(sleepTime); //等待1-6秒
     swipe(device.width - 10, device.height / 2, 10, device.height, 1000); //1秒滑动一页
     let now = new Date().getTime();
-    pages++;
+    pagesFinished++;
+    timeFinished += (sleepTime + 1000);
     if (now - showToastTime > showToastInterval) {
         showRestWork();
         showToastTime = now;
@@ -102,15 +125,39 @@ function shouldEnd() {
         writeSetting();
         refreshSettingFileTime = now;
     }
-    if (now - startTime > timeNeed && pages > pagesNeed) {
-        // return true;
+    if (timeFinished > timeNeed && pagesFinished > pagesNeed) {
+        writeSetting();
     } else {
         shouldEnd();
     }
 }
 
+/**
+ * toast方式显示剩余工作量（剩余时间及剩余页数）
+ */
 function showRestWork() {
-    let now = new Date().getTime();
-    let minute = ((now - startTime) / 1000 / 60).toFixed(2);
-    toast('已完成' + minute + '分钟的阅读,完成页数' + pages + '页');
+    let minute = (timeFinished / 1000 / 60).toFixed(2);
+    toast('已完成时间:' + minute + '分钟,已完成页数:' + pagesFinished + '页');
+}
+
+/**
+ * 唤醒设备，这里主要用于定时任务,在脚本执行前执行
+ */
+function wakeUpDevice() {
+    if (!device.isScreenOn()) {
+        device.wakeUp()
+    }
+}
+
+/**
+ * 进入活动页面签到，此处还需优化，先写点调试的功能（因暂未能报名成功，所以待报名成功后继续完善该部分功能）
+ */
+function gotoActivity() {
+    //进入活动页面
+    recents();
+    sleep(3000);
+    back();
+    sleep(3000);
+    id('centerImg').findOne().click();
+    //经过上述操作应该已经进入了活动页面，后续代码实现待报名成功后继续完成
 }
