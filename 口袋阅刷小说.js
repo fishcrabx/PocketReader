@@ -4,8 +4,8 @@ wakeUpDevice();
 
 let timeNeed = 30 * 60 * 1000; //需要完成的时间，单位是毫秒
 let pagesNeed = 300; //需要完成的翻页次数
-let timeFinished = 0;//已完成的时间
-let pagesFinished = 0;//已完成的页面数
+let timeFinished = 0; //已完成的时间
+let pagesFinished = 0; //已完成的页面数
 
 let showToastInterval = 20 * 1000; //显示剩余完成额度的toast间隔时间,这里设置为20s左右显示一次
 let refreshSettingFileInterval = 60 * 1000; //更新setting文件时间间隔，这里设置为1分钟左右更新一次
@@ -30,12 +30,15 @@ sleep(3000);
 let startTime = new Date().getTime();
 let showToastTime = new Date().getTime();
 let refreshSettingFileTime = new Date().getTime();
-showRestWork();//显示剩余工作量
+showRestWork(); //显示剩余工作量
 
 shouldEnd();
 
+gotoActivity();
+
 toast('目标达成，结束脚本');
 console.log('目标达成，结束脚本');
+
 
 /**
  * 读取配置文件，主要记录了哪天看了多长时间，看了多少页
@@ -150,14 +153,26 @@ function wakeUpDevice() {
 }
 
 /**
- * 进入活动页面签到，此处还需优化，先写点调试的功能（因暂未能报名成功，所以待报名成功后继续完善该部分功能）
+ * 进入活动页面签到，此处还需优化
  */
 function gotoActivity() {
     //进入活动页面
-    recents();
-    sleep(3000);
-    back();
+    app.launch('org.autojs.autojs');
+    sleep(3000)
+    home();
     sleep(3000);
     id('centerImg').findOne().click();
-    //经过上述操作应该已经进入了活动页面，后续代码实现待报名成功后继续完成
+    sleep(8000);
+    //经过上述操作应该已经进入了活动页面
+    //进入打卡页面
+    className("android.view.View").depth(11).clickable().findOne().click();
+    sleep(5000);
+    let c = className("android.widget.Button").depth(12).clickable().findOne();
+    if (c.getText().trim() == '今日已打卡') {
+        toast('今日打卡结束');
+    } else {
+        className("android.widget.Button").depth(12).clickable().click();
+        toast('已点击打卡');
+    }
+
 }
