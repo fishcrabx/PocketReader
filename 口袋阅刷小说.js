@@ -2,7 +2,7 @@ auto.waitFor();
 
 wakeUpDevice();
 
-let timeNeed = 30 * 60 * 1000; //需要完成的时间，单位是毫秒
+let timeNeed = 32 * 60 * 1000; //需要完成的时间，单位是毫秒，经测试，这里设置为32分钟是比较合理的时间
 let pagesNeed = 300; //需要完成的翻页次数
 let timeFinished = 0; //已完成的时间
 let pagesFinished = 0; //已完成的页面数
