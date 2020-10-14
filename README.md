@@ -1,5 +1,9 @@
 # 口袋阅刷小说脚本（基于Auto.js)
 
+
+由于图片显示问题，大家可以访问CSDN连接查看图片
+[点我查看原文章](https://blog.csdn.net/xchl123/article/details/109079274)
+
 ## 写在最前面，如果你是一枚纯小白，建议你直接使用APP
 APP安装方法参考下面的autojs安装方法
 下载链接：https://download.csdn.net/download/xchl123/12923024
