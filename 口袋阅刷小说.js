@@ -2,10 +2,16 @@ auto.waitFor();
 
 wakeUpDevice();
 
+toast("注意：该脚本每次都是打开第一本小说，请确保剩余有足够页数可以翻动，否则会出现不计算页数的情况");
+sleep(3000);
+
+//下面两个参数可以自由更改，想多刷点可以调整哦（两项都满足脚本才会停止)
 let timeNeed = 32 * 60 * 1000; //需要完成的时间，单位是毫秒，经测试，这里设置为32分钟是比较合理的时间
 let pagesNeed = 300; //需要完成的翻页次数
+
 let timeFinished = 0; //已完成的时间
 let pagesFinished = 0; //已完成的页面数
+let imei = ''; //设备的imei号，此处不需要配置，系统会自动读取
 
 let showToastInterval = 20 * 1000; //显示剩余完成额度的toast间隔时间,这里设置为20s左右显示一次
 let refreshSettingFileInterval = 60 * 1000; //更新setting文件时间间隔，这里设置为1分钟左右更新一次
@@ -34,7 +40,8 @@ showRestWork(); //显示剩余工作量
 
 shouldEnd();
 
-gotoActivity();
+/**取消自动打卡功能 */
+// gotoActivity();
 
 toast('目标达成，结束脚本');
 console.log('目标达成，结束脚本');
@@ -78,6 +85,8 @@ function readSetting() {
         console.log('创建配置文件成功')
         toast('创建配置文件成功');
     }
+    //获取IMEI信息
+    getIMEI();
 }
 
 /**
@@ -153,6 +162,35 @@ function wakeUpDevice() {
 }
 
 /**
+ * 返回meid配置信息，首先判断配置文件中是否含有meid信息，如果没有则重新获取一次并向配置文件中写入meid信息
+ * 获取meid信息，打开拨号界面输入：*#06#
+ */
+function getIMEI() {
+    files.createWithDirs(settingFiles); //创建文件，如果存在则直接返回false
+    let fileContent = files.read(settingFiles, encoding = "UTF-8");
+    let json = JSON.parse(fileContent);
+    if (json.hasOwnProperty('imei')) {
+        imei = json['imei'];
+    } else {
+        app.launch('com.android.dialer');
+        id('star').findOne().click();
+        sleep(500);
+        id('pound').findOne().click();
+        sleep(500);
+        id('zero').findOne().click();
+        sleep(500);
+        id('six').findOne().click();
+        sleep(500);
+        id('pound').findOne().click();
+        sleep(3000);
+        imei = className("android.widget.TextView").depth(6).clickable().findOne().getText();
+        json['imei'] = imei;
+        files.write(settingFiles, JSON.stringify(json), encoding = "utf-8");
+    }
+    toast('获取到的IMEI为：' + imei);
+}
+
+/**
  * 进入活动页面签到，此处还需优化
  */
 function gotoActivity() {
@@ -167,12 +205,16 @@ function gotoActivity() {
     //进入打卡页面
     className("android.view.View").depth(11).clickable().findOne().click();
     sleep(5000);
-    let c = className("android.widget.Button").depth(12).clickable().findOne();
-    if (c.getText().trim() == '今日已打卡') {
-        toast('今日打卡结束');
-    } else {
-        className("android.widget.Button").depth(12).clickable().click();
-        toast('已点击打卡');
-    }
+    toast('等你打卡了，注意可能有验证码哦...');
+    /**
+     * 由于后面需要输入验证码打卡，现取消自动打卡功能（心在滴血...)
+     */
+    // let c = className("android.widget.Button").depth(12).clickable().findOne();
+    // if (c.getText().trim() == '今日已打卡') {
+    //     toast('今日打卡结束');
+    // } else {
+    //     className("android.widget.Button").depth(12).clickable().click();
+    //     toast('已点击打卡');
+    // }
 
 }
